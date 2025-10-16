@@ -1,6 +1,120 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, MessageCircle, AlertCircle } from 'lucide-react';
+import { Send, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Message, ChatInterfaceProps } from '../types';
+
+// Component to render answer with references after each section
+const AnswerWithReferences: React.FC<{
+  content: string;
+  chunks: any[];
+  onReferenceClick: (chunk: any) => void;
+}> = ({ content, chunks, onReferenceClick }) => {
+  // Split content into lines and group by numbered sections
+  const lines = content.split('\n');
+  const sections: { text: string; hasNumber: boolean }[] = [];
+  let currentSection = '';
+  let currentHasNumber = false;
+  
+  lines.forEach((line) => {
+    const numberedMatch = line.match(/^(\d+)\.\s+/);
+    
+    if (numberedMatch) {
+      // Save previous section if exists
+      if (currentSection.trim()) {
+        sections.push({
+          text: currentSection.trim(),
+          hasNumber: currentHasNumber
+        });
+      }
+      // Start new section
+      currentSection = line;
+      currentHasNumber = true;
+    } else {
+      // Continue current section
+      currentSection += '\n' + line;
+    }
+  });
+  
+  // Add the last section
+  if (currentSection.trim()) {
+    sections.push({
+      text: currentSection.trim(),
+      hasNumber: currentHasNumber
+    });
+  }
+  
+  // Filter to only numbered sections
+  const numberedSections = sections.filter(s => s.hasNumber);
+  
+  console.log('Numbered sections found:', numberedSections.length);
+  console.log('Chunks available:', chunks.length);
+  
+  return (
+    <div style={{ color: '#1f2937' }}>
+      {numberedSections.map((section, index) => {
+        // Use modulo to cycle through available chunks if we have more sections than chunks
+        const chunkIndex = index % chunks.length;
+        const chunk = chunks[chunkIndex];
+        
+        return (
+          <div key={index} style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '8px' }}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {section.text}
+              </ReactMarkdown>
+            </div>
+            
+            {/* Always show reference if we have any chunks */}
+            {chunk && (
+              <div style={{ 
+                marginLeft: '20px',
+                marginTop: '4px',
+                marginBottom: '4px'
+              }}>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onReferenceClick(chunk);
+                  }}
+                  style={{
+                    fontSize: '11px',
+                    color: '#2563eb',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = '#dbeafe';
+                    (e.currentTarget as HTMLElement).style.borderColor = '#93c5fd';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = '#eff6ff';
+                    (e.currentTarget as HTMLElement).style.borderColor = '#bfdbfe';
+                  }}
+                  title={`Click to navigate to page ${chunk.page || 'unknown'}`}
+                >
+                  <span>�</span>
+                  <span>Page {chunk.page || '?'}</span>
+                </a>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightChunks }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -47,19 +161,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
 
       const result = await response.json();
 
-      if (result.success) {
+      if (result && result.success) {
+        // Safely handle the response structure
+        const relevantChunks = Array.isArray(result.relevantChunks) ? result.relevantChunks : [];
+        
+        console.log('Received chunks from API:', relevantChunks);
+        console.log('First chunk page:', relevantChunks[0]?.page);
+        
+        // Validate each chunk has required properties
+        const validChunks = relevantChunks.filter((chunk: any) => 
+          chunk && 
+          typeof chunk === 'object' && 
+          typeof chunk.text === 'string' &&
+          typeof chunk.start === 'number' &&
+          typeof chunk.end === 'number'
+        );
+
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
-          content: result.answer,
+          content: result.answer || 'No answer provided',
           timestamp: new Date(),
-          relevantChunks: result.relevantChunks,
+          relevantChunks: validChunks,
         };
 
         setMessages(prev => [...prev, assistantMessage]);
-        onHighlightChunks(result.relevantChunks);
+        
+        // Only highlight valid chunks
+        onHighlightChunks(validChunks);
       } else {
-        throw new Error(result.error || 'Failed to get answer');
+        throw new Error(result?.error || 'Failed to get answer');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get answer');
@@ -68,100 +199,79 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
     }
   };
 
-  const handleMessageClick = (message: Message) => {
-    if (message.relevantChunks) {
-      onHighlightChunks(message.relevantChunks);
-    }
+  const handleReferenceClick = (chunk: any) => {
+    console.log('🔗 Reference clicked! Chunk:', chunk);
+    console.log('📄 Page number:', chunk.page);
+    // Highlight only the specific chunk that was clicked, which will trigger page navigation in DocumentViewer
+    onHighlightChunks([chunk]);
   };
 
   return (
-    <div className="chat-container">
-      {/* Messages */}
-      <div className="messages">
+    <div className="chat-container" style={{ background: 'white' }}>
+      {/* Messages - Hidden for clean look, just show input */}
+      <div className="messages" style={{ 
+        background: 'white',
+        display: messages.length === 0 ? 'flex' : 'block',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: messages.length === 0 ? '40px 30px' : '20px 30px'
+      }}>
         {messages.length === 0 && (
-          <div style={{ textAlign: 'center', color: '#6b7280', marginTop: '32px' }}>
-            <MessageCircle size={48} style={{ margin: '0 auto 16px', color: '#d1d5db' }} />
-            <p style={{ fontSize: '18px', marginBottom: '8px' }}>Start asking questions about your document</p>
-            <p style={{ fontSize: '14px' }}>Try asking: "What is this document about?" or "Summarize the main points"</p>
-          </div>
+          <p style={{ color: '#9ca3af', fontSize: '14px', fontStyle: 'italic' }}>
+            Your conversation will appear here...
+          </p>
         )}
 
         {messages.map((message) => (
           <div
             key={message.id}
             className={`message ${message.type}`}
-            onClick={() => handleMessageClick(message)}
             style={{ 
-              cursor: message.relevantChunks ? 'pointer' : 'default',
-              ...(message.relevantChunks && { boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' })
+              cursor: 'default',
             }}
-            title={message.relevantChunks ? 'Click to highlight references in document' : ''}
           >
-            {/* Message content with AI Agent formatting */}
-            <div style={{ marginBottom: '8px' }}>
-              {message.type === 'assistant' ? (
-                <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
-                  {message.content.split('\n').map((line, index) => {
-                    if (line.startsWith('**') && line.endsWith('**')) {
-                      // Bold headers like **Confidence Level:** or **Answer:**
-                      return (
-                        <div key={index} style={{ 
-                          fontWeight: 'bold', 
-                          color: '#1f2937', 
-                          marginBottom: '8px', 
-                          marginTop: index > 0 ? '12px' : '0',
-                          fontSize: '15px'
-                        }}>
-                          {line.replace(/\*\*/g, '')}
-                        </div>
-                      );
-                    } else if (line.startsWith('- ')) {
-                      // Bullet points
-                      return (
-                        <div key={index} style={{ 
-                          marginLeft: '16px', 
-                          marginBottom: '4px', 
-                          fontSize: '14px',
-                          color: '#374151'
-                        }}>
-                          • {line.substring(2)}
-                        </div>
-                      );
-                    } else if (line.trim() === '') {
-                      // Empty lines
-                      return <div key={index} style={{ height: '8px' }} />;
-                    } else {
-                      // Regular text
-                      return (
-                        <div key={index} style={{ 
-                          marginBottom: '4px', 
-                          lineHeight: '1.5',
-                          color: '#374151'
-                        }}>
-                          {line}
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
+            {/* Message content with Markdown formatting */}
+            <div className="markdown-content" style={{ color: '#1f2937' }}>
+              {message.type === 'assistant' && message.relevantChunks && message.relevantChunks.length > 0 ? (
+                <AnswerWithReferences
+                  content={message.content}
+                  chunks={message.relevantChunks}
+                  onReferenceClick={handleReferenceClick}
+                />
+              ) : message.type === 'assistant' ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {message.content}
+                </ReactMarkdown>
               ) : (
-                <p style={{ fontSize: '14px', marginBottom: '0' }}>{message.content}</p>
+                <p style={{ margin: 0, color: '#1f2937', fontWeight: '500' }}>{message.content}</p>
               )}
             </div>
             
             {/* Metadata */}
-            <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '8px' }}>
+            <div style={{ 
+              fontSize: '11px', 
+              color: '#9ca3af', 
+              marginTop: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flexWrap: 'wrap'
+            }}>
               <span>{message.timestamp.toLocaleTimeString()}</span>
               
-              {message.relevantChunks && message.relevantChunks.length > 0 && (
-                <span style={{ marginLeft: '12px' }}>
-                  📍 {message.relevantChunks.length} reference{message.relevantChunks.length !== 1 ? 's' : ''} found
-                </span>
-              )}
-              
               {message.searchMetadata?.maxSimilarity !== undefined && (
-                <span style={{ marginLeft: '12px', color: '#059669' }}>
-                  {(message.searchMetadata.maxSimilarity * 100).toFixed(1)}% relevance
+                <span style={{ 
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 8px',
+                  background: '#f0fdf4',
+                  borderRadius: '10px',
+                  color: '#16a34a',
+                  fontSize: '10px',
+                  fontWeight: '500'
+                }}>
+                  ✓ {(message.searchMetadata.maxSimilarity * 100).toFixed(0)}% relevant
                 </span>
               )}
             </div>
@@ -169,10 +279,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
         ))}
 
         {isLoading && (
-          <div className="message assistant">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="message assistant" style={{ opacity: 0.8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div className="loading"></div>
-              <span style={{ fontSize: '14px' }}>Thinking...</span>
+              <span style={{ fontSize: '14px', fontWeight: '500' }}>Analyzing document...</span>
             </div>
           </div>
         )}
@@ -182,21 +292,33 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
 
       {/* Error Display */}
       {error && (
-        <div className="error" style={{ display: 'flex', alignItems: 'center' }}>
-          <AlertCircle size={20} style={{ marginRight: '8px' }} />
+        <div className="error">
+          <AlertCircle size={20} />
           <p>{error}</p>
         </div>
       )}
 
-      {/* Input Form */}
-      <form onSubmit={handleSubmit} className="chat-form">
-        <input
-          type="text"
+      {/* Input Form - Styled as large textarea */}
+      <form onSubmit={handleSubmit} className="chat-form" style={{ 
+        flexDirection: 'column',
+        padding: '14px 20px',
+        background: 'white',
+        borderTop: '1px solid #e5e7eb'
+      }}>
+        <textarea
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
-          placeholder="Ask a question about the document..."
-          className="input chat-input"
+          placeholder="Type your question here..."
+          className="input"
           disabled={isLoading}
+          style={{
+            minHeight: '60px',
+            resize: 'vertical',
+            marginBottom: '12px',
+            fontFamily: 'inherit',
+            fontSize: '14px',
+            padding: '10px 14px'
+          }}
         />
         <button
           type="submit"
@@ -204,12 +326,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
           className="btn"
           style={{ 
             display: 'flex', 
-            alignItems: 'center', 
-            opacity: (!inputMessage.trim() || isLoading) ? 0.5 : 1,
-            cursor: (!inputMessage.trim() || isLoading) ? 'not-allowed' : 'pointer'
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            alignSelf: 'flex-end',
+            minWidth: '100px'
           }}
         >
           <Send size={16} />
+          <span>{isLoading ? 'Sending...' : 'Send'}</span>
         </button>
       </form>
     </div>

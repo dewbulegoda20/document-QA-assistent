@@ -40,3 +40,49 @@
 .read-the-docs {
   color: #888;
 }
+
+/* PDF Text Layer Highlighting Styles */
+.react-pdf__Page__textContent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 1;
+  line-height: 1.0;
+}
+
+.react-pdf__Page__textContent span {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  transition: background-color 0.2s ease;
+}
+
+/* Highlighted text styling - bright yellow like real highlighter */
+.react-pdf__Page__textContent span[style*="background-color: rgb(255, 255, 0)"],
+.react-pdf__Page__textContent span[style*="background-color:#ffff00"],
+.react-pdf__Page__textContent span[style*="background-color: rgba(255, 255, 0"] {
+  background-color: rgba(255, 255, 0, 0.35) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 0, 0.5) !important;
+}
+
+/* Enhanced highlight animation */
+@keyframes highlight-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(255, 255, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(255, 255, 0, 0.7), 0 0 8px rgba(255, 255, 0, 0.4);
+  }
+}
+
+.react-pdf__Page__textContent span[style*="background-color: rgb(255, 255, 0)"],
+.react-pdf__Page__textContent span[style*="background-color:#ffff00"],
+.react-pdf__Page__textContent span[style*="background-color: rgba(255, 255, 0"] {
+  animation: highlight-pulse 2s ease-in-out;
+  font-weight: 500;
+}

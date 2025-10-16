@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import FileUpload from './components/FileUpload';
+import UploadPage from './components/UploadPage';
 import ChatInterface from './components/ChatInterface';
 import DocumentViewer from './components/DocumentViewer';
 import type { Document, RelevantChunk } from './types';
@@ -14,73 +14,148 @@ function App() {
   };
 
   const handleHighlightChunks = (chunks: RelevantChunk[]) => {
-    setHighlightedChunks(chunks);
+    const safeChunks = Array.isArray(chunks) ? chunks : [];
+    console.log('🎨 App: handleHighlightChunks called with', safeChunks.length, 'chunks');
+    if (safeChunks.length > 0) {
+      console.log('📄 First chunk page:', safeChunks[0].page);
+    }
+    setHighlightedChunks(safeChunks);
   };
 
   return (
-    <div className="container">
-      {/* Header */}
-      <header style={{ marginBottom: '20px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '8px' }}>Document Q&A Assistant</h1>
-        <p style={{ color: '#6b7280' }}>Upload a document and ask questions about its content</p>
-      </header>
-
-      {/* Main Content */}
-      <div className="grid">
-        {/* Left Panel - Upload and Chat */}
-        <div className="panel">
-          {!selectedDocument ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <FileUpload onDocumentSelect={handleDocumentSelect} />
-            </div>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Professional Navigation Bar */}
+      <nav style={{
+        background: 'white',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '0 20px',
+        height: '64px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '36px',
+            height: '36px',
+            background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 'bold',
+            color: 'white',
+            fontSize: '18px'
+          }}>
+            D
+          </div>
+          <span style={{ 
+            fontSize: '20px', 
+            fontWeight: '700',
+            color: '#1f2937'
+          }}>
+            DocuAssist
+          </span>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+          <a href="#" style={{ 
+            textDecoration: 'none', 
+            color: '#4b5563',
+            fontSize: '14px',
+            fontWeight: '500',
+            transition: 'color 0.2s'
+          }} onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
+             onMouseLeave={(e) => e.currentTarget.style.color = '#4b5563'}>
+            Home
+          </a>
+          <a href="#" style={{ 
+            textDecoration: 'none', 
+            color: '#4b5563',
+            fontSize: '14px',
+            fontWeight: '500'
+          }} onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
+             onMouseLeave={(e) => e.currentTarget.style.color = '#4b5563'}>
+            Documents
+          </a>
+          <a href="#" style={{ 
+            textDecoration: 'none', 
+            color: '#4b5563',
+            fontSize: '14px',
+            fontWeight: '500'
+          }} onMouseEnter={(e) => e.currentTarget.style.color = '#2563eb'}
+             onMouseLeave={(e) => e.currentTarget.style.color = '#4b5563'}>
+            Settings
+          </a>
+          
+          {/* Change Document Button - Show when document is loaded */}
+          {selectedDocument ? (
+            <button
+              onClick={() => setSelectedDocument(null)}
+              className="btn"
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Change Document
+            </button>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              {/* Document Info */}
-              <div style={{ padding: '15px', borderBottom: '1px solid #e2e8f0', marginBottom: '15px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h3 style={{ fontWeight: '600', marginBottom: '4px' }}>{selectedDocument.filename}</h3>
-                    <p style={{ fontSize: '14px', color: '#6b7280' }}>
-                      Uploaded: {new Date(selectedDocument.uploadedAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedDocument(null)}
-                    className="btn"
-                    style={{ fontSize: '12px', padding: '6px 12px' }}
-                  >
-                    Change Document
-                  </button>
+            <button className="btn" style={{ 
+              padding: '8px 16px',
+              fontSize: '13px'
+            }}>
+              Get Started
+            </button>
+          )}
+        </div>
+      </nav>
+
+      <div className="container">
+        {/* Show upload page or main interface */}
+        {!selectedDocument ? (
+          <>
+            {/* Upload Page - No header needed, component has its own */}
+            <UploadPage onDocumentSelect={handleDocumentSelect} />
+          </>
+        ) : (
+          <>
+            {/* Main Content - No header, direct to panels */}
+            <div className="grid" style={{ marginTop: '10px' }}>
+              {/* Left Panel - Chat Interface (styled as simple question panel) */}
+              <div className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '20px 30px', borderBottom: '1px solid #e5e7eb' }}>
+                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                    Ask a Question
+                  </h2>
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <ChatInterface
+                    documentId={selectedDocument.id}
+                    onHighlightChunks={handleHighlightChunks}
+                  />
                 </div>
               </div>
-              
-              {/* Chat Interface */}
-              <div style={{ flex: 1, overflow: 'hidden' }}>
-                <ChatInterface
+
+              {/* Right Panel - Document Viewer (original working component) */}
+              <div className="panel">
+                <DocumentViewer
                   documentId={selectedDocument.id}
-                  onHighlightChunks={handleHighlightChunks}
+                  highlightedChunks={highlightedChunks || []}
                 />
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Right Panel - Document Viewer */}
-        <div className="panel">
-          {selectedDocument ? (
-            <DocumentViewer
-              documentId={selectedDocument.id}
-              highlightedChunks={highlightedChunks}
-            />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280' }}>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: '18px', marginBottom: '8px' }}>Upload a document to view it here</p>
-                <p style={{ fontSize: '14px' }}>The document will appear with highlighted references when you ask questions</p>
-              </div>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

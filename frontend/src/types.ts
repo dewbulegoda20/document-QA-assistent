@@ -16,6 +16,7 @@ export interface RelevantChunk {
   end: number;
   similarity?: number;
   score?: number;
+  page?: number; // Add page number
   metadata?: {
     filename?: string;
     chunkIndex?: number;
@@ -48,4 +49,5 @@ export interface FileUploadProps {
 export interface DocumentViewerProps {
   documentId: string;
   highlightedChunks: RelevantChunk[];
+  onPageChange?: (pageNumber: number) => void; // Add page change callback
 }

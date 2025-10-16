@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
-import type { Document, FileUploadProps } from '../types';
+import type { FileUploadProps } from '../types';
 
 const FileUpload: React.FC<FileUploadProps> = ({ onDocumentSelect }) => {
   const [uploading, setUploading] = useState(false);
