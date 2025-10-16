@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: document-qa-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node index.js
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false

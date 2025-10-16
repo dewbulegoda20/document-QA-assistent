@@ -41,7 +41,8 @@ async function extractTextFromPDF(buffer) {
 }
 
 const app = express();
-const PORT = 3002; // Fixed port for consistency
+// Use Railway's PORT environment variable or fallback to 3002 for local dev
+const PORT = process.env.PORT || 3002;
 
 // In-memory storage
 const documents = new Map();
