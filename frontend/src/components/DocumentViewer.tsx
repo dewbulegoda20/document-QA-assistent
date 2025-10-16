@@ -4,6 +4,7 @@ import { AlertCircle } from 'lucide-react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import type { DocumentViewerProps } from '../types';
+import { API_ENDPOINTS } from '../config/api';
 
 // Set up PDF.js worker - try local first, fallback to CDN
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -152,7 +153,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, highlighted
       console.log('Fetching document:', documentId);
       
       // Get document data
-      const response = await fetch(`/api/documents/${documentId}`);
+      const response = await fetch(API_ENDPOINTS.DOCUMENT_BY_ID(documentId));
       if (!response.ok) {
         throw new Error(`Failed to fetch document: ${response.status} ${response.statusText}`);
       }
@@ -178,7 +179,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, highlighted
       
       // Get PDF file - use direct URL instead of blob
       console.log('Setting PDF URL...');
-      const pdfUrl = `/api/documents/${documentId}/pdf`;
+      const pdfUrl = API_ENDPOINTS.DOCUMENT_PDF(documentId);
       console.log('PDF URL set:', pdfUrl);
       setPdfFile(pdfUrl);
       

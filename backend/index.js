@@ -87,8 +87,13 @@ async function initializeGemini() {
   }
 }
 
-// Middleware
-app.use(cors());
+// Middleware - Configure CORS for production
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || '*', // Set FRONTEND_URL in Railway to your deployed frontend URL
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Configure multer for file upload

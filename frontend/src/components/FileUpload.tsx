@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
 import type { FileUploadProps } from '../types';
+import { API_ENDPOINTS } from '../config/api';
 
 const FileUpload: React.FC<FileUploadProps> = ({ onDocumentSelect }) => {
   const [uploading, setUploading] = useState(false);
@@ -20,7 +21,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onDocumentSelect }) => {
     formData.append('document', file);
 
     try {
-      const response = await fetch('/api/upload', {
+      const response = await fetch(API_ENDPOINTS.UPLOAD, {
         method: 'POST',
         body: formData,
       });

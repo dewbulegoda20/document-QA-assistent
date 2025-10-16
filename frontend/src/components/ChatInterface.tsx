@@ -3,6 +3,7 @@ import { Send, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Message, ChatInterfaceProps } from '../types';
+import { API_ENDPOINTS } from '../config/api';
 
 // Component to render answer with references after each section
 const AnswerWithReferences: React.FC<{
@@ -49,6 +50,64 @@ const AnswerWithReferences: React.FC<{
   
   console.log('Numbered sections found:', numberedSections.length);
   console.log('Chunks available:', chunks.length);
+  
+  // If no numbered sections, just render the content with references at the end
+  if (numberedSections.length === 0) {
+    return (
+      <div style={{ color: '#1f2937' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {content}
+          </ReactMarkdown>
+        </div>
+        
+        {/* Show all references at the end */}
+        {chunks.length > 0 && (
+          <div style={{ marginTop: '12px' }}>
+            {chunks.map((chunk, index) => (
+              <div key={index} style={{ marginBottom: '4px' }}>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onReferenceClick(chunk);
+                  }}
+                  style={{
+                    fontSize: '11px',
+                    color: '#2563eb',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = '#dbeafe';
+                    (e.currentTarget as HTMLElement).style.borderColor = '#93c5fd';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = '#eff6ff';
+                    (e.currentTarget as HTMLElement).style.borderColor = '#bfdbfe';
+                  }}
+                  title={`Click to view reference ${index + 1}`}
+                >
+                  <span>📄</span>
+                  <span>Reference {index + 1} {chunk.page ? `(Page ${chunk.page})` : ''}</span>
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
   
   return (
     <div style={{ color: '#1f2937' }}>
@@ -148,7 +207,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
     setError(null);
 
     try {
-      const response = await fetch('/api/ask', {
+      const response = await fetch(API_ENDPOINTS.ASK, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,6 +219,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
       });
 
       const result = await response.json();
+
+      console.log('🔍 API Response:', result);
+      console.log('✅ Success:', result.success);
+      console.log('📝 Answer:', result.answer);
+      console.log('📚 Chunks:', result.relevantChunks);
 
       if (result && result.success) {
         // Safely handle the response structure
@@ -177,6 +241,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
           typeof chunk.end === 'number'
         );
 
+        console.log('✅ Valid chunks:', validChunks.length);
+
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
@@ -185,7 +251,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
           relevantChunks: validChunks,
         };
 
+        console.log('💬 Creating assistant message:', assistantMessage);
+
         setMessages(prev => [...prev, assistantMessage]);
+        
+        console.log('✅ Message added to state');
         
         // Only highlight valid chunks
         onHighlightChunks(validChunks);
@@ -222,7 +292,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
           </p>
         )}
 
-        {messages.map((message) => (
+        {messages.map((message) => {
+          console.log('🎨 Rendering message:', message.id, message.type, 'Content length:', message.content?.length);
+          return (
           <div
             key={message.id}
             className={`message ${message.type}`}
@@ -276,7 +348,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ documentId, onHighlightCh
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {isLoading && (
           <div className="message assistant" style={{ opacity: 0.8 }}>

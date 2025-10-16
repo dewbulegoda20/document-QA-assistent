@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
 
 interface SimpleDocumentViewerProps {
   documentId: string;
@@ -27,7 +28,7 @@ const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
       
       console.log('Fetching document:', documentId);
       
-      const response = await fetch(`/api/documents/${documentId}`);
+      const response = await fetch(API_ENDPOINTS.DOCUMENT_BY_ID(documentId));
       if (!response.ok) {
         throw new Error(`Failed to fetch document: ${response.status}`);
       }
