@@ -1,11 +1,8 @@
 [phases.setup]
-nixPkgs = ['nodejs_18', 'npm-9_x']
+nixPkgs = ['nodejs_18']
 
 [phases.install]
-cmds = ['npm ci']
-
-[phases.build]
-# No build phase needed for backend
+cmds = ['npm install --production=false']
 
 [start]
 cmd = 'node index.js'

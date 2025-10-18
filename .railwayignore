@@ -1,0 +1,10 @@
+# Tell Railway to ignore root package.json
+/package.json
+/package-lock.json
+/node_modules
+/frontend
+/.git
+/.github
+/README.md
+/DEPLOYMENT_FIXES.md
+/RAILWAY*.md
